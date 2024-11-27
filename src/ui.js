@@ -1,5 +1,5 @@
 /*global navigate*/
-import './spatial-navigation-polyfill.js';
+// import './spatial-navigation-polyfill.js';
 import {
   configAddChangeListener,
   configRead,
