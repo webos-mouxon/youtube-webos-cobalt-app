@@ -1,8 +1,6 @@
-import * as sha256 from 'tiny-sha256';
+import sha256 from 'tiny-sha256';
 import { configRead } from './config';
 import { showNotification } from './ui';
-
-export function userScriptStartSponsorBlock() {}
 
 // Copied from https://github.com/ajayyy/SponsorBlock/blob/9392d16617d2d48abb6125c00e2ff6042cb7bebe/src/config.ts#L179-L233
 const barTypes = {
@@ -46,10 +44,14 @@ class SponsorBlockHandler {
 
   attachVideoTimeout = null;
   nextSkipTimeout = null;
-  slicer = null;
+
+  slider = null;
+  sliderInterval = null;
+  sliderObserver = null;
+  sliderSegmentsOverlay = null;
+
   slicerKeeperInterval = null;
 
-  segmentsoverlay = null;
   scheduleSkipHandler = null;
   durationChangeHandler = null;
   segments = null;
@@ -180,9 +182,8 @@ class SponsorBlockHandler {
   }
 
   buildOverlay() {
-    console.info('Sponsor:', this.videoID, 'Build overlay');
-    if (this.segmentsoverlay) {
-      console.info('Sponsor:', this.videoID, 'Overlay already built');
+    if (this.sliderSegmentsOverlay) {
+      console.info('Overlay already built');
       return;
     }
 
@@ -194,22 +195,23 @@ class SponsorBlockHandler {
     const videoDuration = this.video.duration;
     console.info('Sponsor:', this.videoID, 'Video Duration', videoDuration);
 
-    this.segmentsoverlay = document.createElement('div');
-    this.segmentsoverlay.classList.add('sponsorblock-slider');
+    this.sliderSegmentsOverlay = document.createElement('div');
+    this.sliderSegmentsOverlay.classList.add('sponsorblock-slider');
     this.segments.forEach((segment) => {
       const [start, end] = segment.segment;
       const barType = barTypes[segment.category] || {
         color: 'blue',
         opacity: 0.7
       };
-      const transform = `translateX(${
-        (start / videoDuration) * 100.0
-      }%) scaleX(${(end - start) / videoDuration})`;
+      const transform = `translateX(${(start / videoDuration) * 100.0
+        }%) scaleX(${(end - start) / videoDuration})`;
       const elm = document.createElement('div');
       elm.classList.add('ytlr-progress-bar__played');
-      elm.style['background'] = barType.color;
+      elm.style['background-color'] = barType.color;
       elm.style['opacity'] = barType.opacity;
       elm.style['-webkit-transform'] = transform;
+      console.info('Generated element', elm, 'from', segment, transform);
+      this.sliderSegmentsOverlay.appendChild(elm);
       elm.style['transform'] = transform;
       console.info(
         'Sponsor:',
@@ -220,8 +222,105 @@ class SponsorBlockHandler {
         segment,
         transform
       );
-      this.segmentsoverlay.appendChild(elm);
+      this.sliderSegmentsOverlay.appendChild(elm);
     });
+
+    /*
+    const getSliderType = () => {
+      if (!this.slider) {
+        return null;
+      }
+ 
+      return this.slider.classList.contains(
+        'ytlr-multi-markers-player-bar-renderer'
+      )
+        ? 'multi-markers-player-bar'
+        : 'progress-bar';
+    };
+ 
+    const addSliderObserver = () => {
+      this.sliderObserver.observe(this.slider.parentNode, {
+        childList: true,
+        subtree: true
+      });
+    };
+ 
+    const addSliderOverlay = () => {
+      const sliderType = getSliderType();
+ 
+      // remove all styles from overlay
+      this.sliderSegmentsOverlay.removeAttribute('style');
+      this.sliderSegmentsOverlay.className = '';
+ 
+      switch (sliderType) {
+        case 'multi-markers-player-bar':
+          if (this.slider.parentNode) {
+            this.sliderSegmentsOverlay.style.top = '1.5rem';
+            this.sliderSegmentsOverlay.classList.add(
+              'ytlr-multi-markers-player-bar-renderer'
+            );
+            this.sliderSegmentsOverlay.classList.add(
+              'ytlr-multi-markers-player-bar-renderer__slider'
+            );
+ 
+            // add overlay just before playhead, so
+            // it is between the chapter layer and playhead
+            this.slider.parentNode.insertBefore(
+              this.sliderSegmentsOverlay,
+              document.querySelector('.ytlr-playhead')
+            );
+          } else {
+            console.info('slider without parent? video must have ended.');
+          }
+          break;
+ 
+        case 'progress-bar':
+          this.slider.appendChild(this.sliderSegmentsOverlay);
+          break;
+ 
+        default:
+          console.info('unknown slider type');
+          break;
+      }
+    };
+ 
+    const watchForSlider = () => {
+      if (this.sliderInterval) clearInterval(this.sliderInterval);
+ 
+      this.sliderInterval = setInterval(() => {
+        this.slider = document.querySelector(
+          '.ytlr-progress-bar__slider, .ytlr-multi-markers-player-bar-renderer'
+        );
+        if (this.slider) {
+          console.info('slider found...', this.slider);
+          clearInterval(this.sliderInterval);
+          this.sliderInterval = null;
+          addSliderObserver();
+          addSliderOverlay();
+        }
+      }, 100);
+    };
+ 
+    this.sliderObserver = new MutationObserver((mutations) => {
+      mutations.forEach((m) => {
+        if (m.removedNodes) {
+          for (const node of m.removedNodes) {
+            if (node === this.sliderSegmentsOverlay) {
+              console.info('bringing back segments overlay');
+              addSliderOverlay();
+            }
+            if (node === this.slider) {
+              console.info('slider removed, watching again');
+              this.sliderObserver.disconnect();
+              watchForSlider();
+            }
+          }
+        }
+      });
+    });
+ 
+    watchForSlider();
+    */
 
     try {
       console.info('Sponsor:', this.videoID, 'startSlicerKeeper');
@@ -247,10 +346,10 @@ class SponsorBlockHandler {
     }
     this.slicerKeeperInterval = setInterval(() => {
       try {
-        if (this.segmentsoverlay.offsetParent === null) {
+        if (this.sliderSegmentsOverlay.offsetParent === null) {
           const slicer = this.getCurrentSlicer();
           if (slicer) {
-            slicer.appendChild(this.segmentsoverlay);
+            slicer.appendChild(this.sliderSegmentsOverlay);
           }
           // console.info("Sponsor:", this.videoID, 'Bringing back segments overlay');
         }
@@ -310,28 +409,30 @@ class SponsorBlockHandler {
     //   start - this.video.currentTime
     // );
 
-    this.nextSkipTimeout = setTimeout(() => {
-      if (this.video.paused) {
-        console.info('Sponsor:', this.videoID, 'Currently paused, ignoring...');
-        return;
-      }
-      if (!this.skippableCategories.includes(segment.category)) {
-        console.info(
-          'Sponsor:',
-          this.videoID,
-          'Segment',
-          segment.category,
-          'is not skippable, ignoring...'
-        );
-        return;
-      }
+    this.nextSkipTimeout = setTimeout(
+      () => {
+        if (this.video.paused) {
+          console.info(this.videoID, 'Currently paused, ignoring...');
+          return;
+        }
+        if (!this.skippableCategories.includes(segment.category)) {
+          console.info(
+            this.videoID,
+            'Segment',
+            segment.category,
+            'is not skippable, ignoring...'
+          );
+          return;
+        }
 
-      const skipName = barTypes[segment.category]?.name || segment.category;
-      console.info('Sponsor:', this.videoID, 'Skipping', segment);
-      showNotification(`Skipping ${skipName}`);
-      this.video.currentTime = end;
-      this.scheduleSkip();
-    }, (start - this.video.currentTime) * 1000);
+        const skipName = barTypes[segment.category]?.name || segment.category;
+        console.info(this.videoID, 'Skipping', segment);
+        showNotification(`Skipping ${skipName}`);
+        this.video.currentTime = end;
+        this.scheduleSkip();
+      },
+      (start - this.video.currentTime) * 1000
+    );
   }
 
   destroy() {
@@ -349,6 +450,23 @@ class SponsorBlockHandler {
       this.attachVideoTimeout = null;
     }
 
+    /*
+    if (this.sliderInterval) {
+      clearInterval(this.sliderInterval);
+      this.sliderInterval = null;
+    }
+ 
+    if (this.sliderObserver) {
+      this.sliderObserver.disconnect();
+      this.sliderObserver = null;
+    }
+ 
+    if (this.sliderSegmentsOverlay) {
+      this.sliderSegmentsOverlay.remove();
+      this.sliderSegmentsOverlay = null;
+    }
+    */
+
     this.stopSlicerKeeper();
 
     if (this.video) {
@@ -361,10 +479,10 @@ class SponsorBlockHandler {
       );
     }
 
-    if (this.segmentsoverlay && this.segmentsoverlay.parentElement) {
-      this.segmentsoverlay.parentElement.removeChild(this.segmentsoverlay);
+    if (this.sliderSegmentsOverlay && this.sliderSegmentsOverlay.parentElement) {
+      this.sliderSegmentsOverlay.parentElement.removeChild(this.sliderSegmentsOverlay);
     }
-    this.segmentsoverlay = null;
+    this.sliderSegmentsOverlay = null;
 
     console.info('Sponsor:', this.videoID, 'Destroyed');
   }
@@ -378,48 +496,55 @@ class SponsorBlockHandler {
 // shows my lack of understanding of javascript. (or both)
 window.sponsorblock = null;
 
-function hashChange() {
-  const newURL = new URL(location.hash.substring(1), location.href);
-  const videoID = newURL.searchParams.get('v');
-  const needsReload =
-    videoID &&
-    (!window.sponsorblock ||
-      window.sponsorblock.videoID != videoID ||
-      window.sponsorblock.segmentsoverlay == null);
-
-  console.info(
-    'Sponsor:',
-    videoID,
-    'hashchange',
-    window.sponsorblock,
-    window.sponsorblock ? window.sponsorblock.videoID : null,
-    needsReload
-  );
-
-  if (!videoID) {
+function uninitializeSponsorblock() {
+  if (!window.sponsorblock) {
     return;
   }
-
-  if (needsReload) {
-    if (window.sponsorblock) {
-      try {
-        window.sponsorblock.destroy();
-      } catch (err) {
-        console.warn('window.sponsorblock.destroy() failed!', err);
-      }
-      window.sponsorblock = null;
-    }
-
-    if (configRead('enableSponsorBlock')) {
-      console.info('Sponsor', videoID, 'initialize');
-      window.sponsorblock = new SponsorBlockHandler(videoID);
-      window.sponsorblock.init();
-    } else {
-      console.info('SponsorBlock disabled, not loading');
-    }
+  try {
+    window.sponsorblock.destroy();
+  } catch (err) {
+    console.warn('window.sponsorblock.destroy() failed!', err);
   }
+  window.sponsorblock = null;
 }
 
-window.addEventListener('hashchange', hashChange, false);
+window.addEventListener(
+  'hashchange',
+  () => {
+    const newURL = new URL(location.hash.substring(1), location.href);
+    // uninitialize sponsorblock when not on `/watch` path, to prevent
+    // it from attaching to playback preview video element loaded on
+    // home page
+    if (newURL.pathname !== '/watch' && window.sponsorblock) {
+      console.info('uninitializing sponsorblock on a non-video page');
+      uninitializeSponsorblock();
+      return;
+    }
 
-hashChange();
+    const videoID = newURL.searchParams.get('v');
+    const needsReload =
+      videoID &&
+      (!window.sponsorblock || window.sponsorblock.videoID != videoID);
+
+    console.info(
+      'Sponsor:',
+      'hashchange',
+      videoID,
+      window.sponsorblock,
+      window.sponsorblock ? window.sponsorblock.videoID : null,
+      needsReload
+    );
+
+    if (needsReload) {
+      uninitializeSponsorblock();
+
+      if (configRead('enableSponsorBlock')) {
+        window.sponsorblock = new SponsorBlockHandler(videoID);
+        window.sponsorblock.init();
+      } else {
+        console.info('SponsorBlock disabled, not loading');
+      }
+    }
+  },
+  false
+);

@@ -48,8 +48,8 @@ function add(name, label, checked = false, callback = null) {
     }
   };
 
-  const cb = (evt) => {
-    const newState = toggleCheck(name);
+  const cb = (_) => {
+    toggleCheck(name);
   };
 
   wrapper.addEventListener(

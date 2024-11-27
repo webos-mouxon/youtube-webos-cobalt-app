@@ -1,7 +1,8 @@
 *.ipk
-node_modules
-dist
-!dist/*.html
-!dist/*.js
-!dist/*.css
+/node_modules/
+/dist/
+!/dist/*.html
+!/dist/*.js
+!/dist/*.css
 .DS_Store
+/.vscode/

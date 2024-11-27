@@ -1,13 +1,7 @@
 import 'whatwg-fetch';
 import './domrect-polyfill';
-import './adblock.js';
-import './sponsorblock.js';
-import './ui.js';
 
 import { handleLaunch, waitForChildAdd } from './utils';
-import { userScriptStartAdBlock } from './adblock.js';
-import { userScriptStartSponsorBlock } from './sponsorblock.js';
-import { userScriptStartUI } from './ui.js';
 
 document.addEventListener(
   'webOSRelaunch',
@@ -18,12 +12,18 @@ document.addEventListener(
   true
 );
 
+import './adblock.js';
+import './shorts.js';
+import './sponsorblock.js';
+import './ui.js';
+
 // This IIFE is to keep the video element fill the entire window so that screensaver doesn't kick in.
 (async () => {
   /** @type {HTMLVideoElement} */
   const video = await waitForChildAdd(
     document.body,
-    (node) => node instanceof HTMLVideoElement
+    (node) => node instanceof HTMLVideoElement,
+    false
   );
 
   const playerCtrlObs = new MutationObserver(() => {
@@ -50,14 +50,4 @@ document.addEventListener(
     attributes: true,
     attributeFilter: ['style']
   });
-})();
-
-export function startUserScript() {
-  userScriptStartAdBlock();
-  userScriptStartSponsorBlock();
-  userScriptStartUI();
-}
-
-(function () {
-  startUserScript();
 })();

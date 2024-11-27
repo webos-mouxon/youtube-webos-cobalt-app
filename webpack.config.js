@@ -1,41 +1,33 @@
-const path = require('path');
-const CopyPlugin = require('copy-webpack-plugin');
+import CopyPlugin from 'copy-webpack-plugin';
+import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-
-module.exports = (env) => [
+/** @type {(env: Record<string, string>) => (import('webpack').Configuration)[]} */
+const makeConfig = () => [
   {
-    mode: env.production ? 'production' : 'development',
-
-    target: 'browserslist',
-
-    // Builds with devtool support (development) contain very big eval chunks,
-    // which seem to cause segfaults (at least) on nodeJS v0.12.2 used on webOS 3.x.
-    // This feature makes sense only when using recent enough chrome-based
-    // node inspector anyway.
-    devtool: env.production ? false : 'source-map',
-
-    optimization: {
-      minimize: env.production ? true : false,
-    },
+    /**
+     * NOTE: Builds with devtool = 'eval' contain very big eval chunks which seem
+     * to cause segfaults (at least) on nodeJS v0.12.2 used on webOS 3.x.
+     */
+    devtool: 'source-map',
 
     entry: {
-      index: './src/index.js',
       adblockMain: './src/userScript.js',
-      userScript: './src/userScript.js'
+      index: './src/index.js',
+      userScript: {
+        import: './src/userScript.js',
+        filename: 'webOSUserScripts/[name].js'
+      }
     },
-    output: {
-      path: path.resolve(__dirname, './dist'),
-      filename: ({ chunk: { name } }) =>
-        name === 'userScript' ? 'webOSUserScripts/[name].js' : '[name].js'
-    },
+
     resolve: {
-      extensions: ['.ts', '.js']
+      extensions: ['.mjs', '.cjs', '.js', '.json']
     },
+
     module: {
       rules: [
         {
-          test: /\.m?js$/,
+          test: /\.[mc]?js$/i,
+
           loader: 'babel-loader',
           exclude: [
             // Some module should not be transpiled by Babel
@@ -46,6 +38,10 @@ module.exports = (env) => [
           ],
           options: {
             cacheDirectory: true
+          },
+          resolve: {
+            // File extension DON'T MATTER in a bundler.
+            fullySpecified: false
           }
         },
         {
@@ -57,6 +53,7 @@ module.exports = (env) => [
         }
       ]
     },
+
     plugins: [
       new MiniCssExtractPlugin({
         chunkFilename: '[id].css'
@@ -70,3 +67,5 @@ module.exports = (env) => [
     ]
   }
 ];
+
+export default makeConfig;
