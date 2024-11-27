@@ -214,12 +214,15 @@ function callbackConfig(configName) {
   };
 };
 
-function createConfigCheckboxCobalt(key) {
+function createConfigCheckboxCobalt(key, callback) {
+  if (callback == null) {
+    callback = callbackConfig(key)
+  }
   return checkboxTools.add(
     '__' + key,
     configGetDesc(key),
     configRead(key),
-    callbackConfig(key)
+    callback
   )
 }
 
@@ -280,7 +283,11 @@ function createOptionsPanelCobalt() {
   uiContainer.appendChild(divTitle);
 
   uiContainer.appendChild(createConfigCheckboxCobalt('enableAdBlock'))
-  uiContainer.appendChild(createConfigCheckboxCobalt('hideLogo'))
+  uiContainer.appendChild(createConfigCheckboxCobalt('hideLogo', (newState) => {
+    configWrite('hideLogo', newState);
+    logoHideShow();
+  }
+  ))
   uiContainer.appendChild(createConfigCheckboxCobalt('removeShorts'))
   uiContainer.appendChild(createConfigCheckboxCobalt('enableSponsorBlock'))
 
@@ -334,6 +341,15 @@ function closeContainer() {
   uiContainer.blur();
   if (latestFocus != null) {
     latestFocus.focus();
+  }
+}
+
+function logoHideShow() {
+  var logo = document.querySelector('ytlr-redux-connect-ytlr-logo-entity');
+  if (logo != null) {
+    logo.style.visibility = configRead('hideLogo')
+      ? 'hidden'
+      : 'visible';
   }
 }
 
@@ -407,22 +423,22 @@ export function showNotification(text, time = 3000) {
 /**
  * Initialize ability to hide YouTube logo in top right corner.
  */
-function initHideLogo() {
-  const style = document.createElement('style');
-  document.head.appendChild(style);
+// function initHideLogo() {
+//   const style = document.createElement('style');
+//   document.head.appendChild(style);
 
-  /** @type {(hide: boolean) => void} */
-  const setHidden = (hide) => {
-    const visibility = hide ? 'hidden' : 'visible';
-    style.textContent = `ytlr-redux-connect-ytlr-logo-entity { visibility: ${visibility}; }`;
-  };
+//   /** @type {(hide: boolean) => void} */
+//   const setHidden = (hide) => {
+//     const visibility = hide ? 'hidden' : 'visible';
+//     style.textContent = `ytlr-redux-connect-ytlr-logo-entity { visibility: ${visibility}; }`;
+//   };
 
-  setHidden(configRead('hideLogo'));
+//   setHidden(configRead('hideLogo'));
 
-  configAddChangeListener('hideLogo', (evt) => {
-    setHidden(evt.detail.newValue);
-  });
-}
+//   configAddChangeListener('hideLogo', (evt) => {
+//     setHidden(evt.detail.newValue);
+//   });
+// }
 
 function applyUIFixes() {
   try {
@@ -461,8 +477,13 @@ document.addEventListener('keypress', eventHandler, true);
 document.addEventListener('keyup', eventHandler, true);
 
 applyUIFixes();
-initHideLogo();
+// initHideLogo();
 
 setTimeout(() => {
   showNotification('Press [GREEN] to open YTAF configuration screen');
 }, 2000);
+
+logoHideShow();
+setTimeout(() => {
+  logoHideShow();
+}, 4000);

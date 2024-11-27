@@ -210,8 +210,6 @@ class SponsorBlockHandler {
       elm.style['background-color'] = barType.color;
       elm.style['opacity'] = barType.opacity;
       elm.style['-webkit-transform'] = transform;
-      console.info('Generated element', elm, 'from', segment, transform);
-      this.sliderSegmentsOverlay.appendChild(elm);
       elm.style['transform'] = transform;
       console.info(
         'Sponsor:',
@@ -222,6 +220,7 @@ class SponsorBlockHandler {
         segment,
         transform
       );
+      console.info('Generated element', elm, 'from', segment, transform);
       this.sliderSegmentsOverlay.appendChild(elm);
     });
 
@@ -508,43 +507,49 @@ function uninitializeSponsorblock() {
   window.sponsorblock = null;
 }
 
+function hashChange() {
+  const newURL = new URL(location.hash.substring(1), location.href);
+  // uninitialize sponsorblock when not on `/watch` path, to prevent
+  // it from attaching to playback preview video element loaded on
+  // home page
+  if (newURL.pathname !== '/watch' && window.sponsorblock) {
+    console.info('uninitializing sponsorblock on a non-video page');
+    uninitializeSponsorblock();
+    return;
+  }
+
+  const videoID = newURL.searchParams.get('v');
+  const needsReload =
+    videoID &&
+    (!window.sponsorblock || window.sponsorblock.videoID != videoID);
+
+  console.info(
+    'Sponsor:',
+    'hashchange',
+    videoID,
+    window.sponsorblock,
+    window.sponsorblock ? window.sponsorblock.videoID : null,
+    needsReload
+  );
+
+  if (needsReload) {
+    uninitializeSponsorblock();
+
+    if (configRead('enableSponsorBlock')) {
+      window.sponsorblock = new SponsorBlockHandler(videoID);
+      window.sponsorblock.init();
+    } else {
+      console.info('SponsorBlock disabled, not loading');
+    }
+  }
+}
+
 window.addEventListener(
   'hashchange',
   () => {
-    const newURL = new URL(location.hash.substring(1), location.href);
-    // uninitialize sponsorblock when not on `/watch` path, to prevent
-    // it from attaching to playback preview video element loaded on
-    // home page
-    if (newURL.pathname !== '/watch' && window.sponsorblock) {
-      console.info('uninitializing sponsorblock on a non-video page');
-      uninitializeSponsorblock();
-      return;
-    }
-
-    const videoID = newURL.searchParams.get('v');
-    const needsReload =
-      videoID &&
-      (!window.sponsorblock || window.sponsorblock.videoID != videoID);
-
-    console.info(
-      'Sponsor:',
-      'hashchange',
-      videoID,
-      window.sponsorblock,
-      window.sponsorblock ? window.sponsorblock.videoID : null,
-      needsReload
-    );
-
-    if (needsReload) {
-      uninitializeSponsorblock();
-
-      if (configRead('enableSponsorBlock')) {
-        window.sponsorblock = new SponsorBlockHandler(videoID);
-        window.sponsorblock.init();
-      } else {
-        console.info('SponsorBlock disabled, not loading');
-      }
-    }
+    hashChange();
   },
   false
 );
+
+hashChange();
