@@ -26,4 +26,4 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Validate build is correctly build
-        run: git diff && git diff --quiet 
+        run: git diff && git diff --quiet
