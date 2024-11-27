@@ -13,7 +13,7 @@ This repository https://github.com/webos-mouxon/youtube-webos-cobalt-browser pro
 
 YouTube App with extended functionalities
 
-![Configuration Screen](./screenshots/1_sm.jpg)
+![Configuration Screen](./screenshots/1_sm.png)
 ![Segment Skipped](./screenshots/2_sm.jpg)
 
 ## Features
