@@ -48,11 +48,11 @@ const defaultConfig = (() => {
   return ret;
 })();
 
-/** @type {Record<string, DocumentFragment>} as const */
+/** @type {Record<string, Element>} as const */
 const configFrags = (() => {
   let ret = {};
   for (const k of configOptions.keys()) {
-    ret[k] = new DocumentFragment();
+    ret[k] = document.createElement('div');
   }
   return ret;
 })();
